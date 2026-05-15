@@ -3,21 +3,27 @@
     "description": "OpenAI-compatible 图片接口",
     "type": "object",
     "items": {
-      "api_key": {
-        "description": "API Key",
-        "type": "string",
-        "hint": "也可以通过环境变量 OPENAI_API_KEY 提供。"
-      },
       "base_url": {
         "description": "Base URL",
         "type": "string",
         "default": "https://api.openai.com/v1",
         "hint": "兼容 OpenAI SDK 的 /v1 地址。"
       },
+      "api_key": {
+        "description": "API Key",
+        "type": "string",
+        "hint": "也可以通过环境变量 OPENAI_API_KEY 提供。"
+      },
       "request_timeout_seconds": {
         "description": "生图请求超时时间（秒）",
         "type": "int",
         "default": 120
+      },
+      "max_concurrent_image_requests": {
+        "description": "总并发图片请求数",
+        "type": "int",
+        "default": 8,
+        "hint": "一次生成多张会拆成多个单张请求并发执行；这里限制所有正在运行会话的单张图片请求总数，建议 1 到 16。"
       }
     }
   },
@@ -56,11 +62,17 @@
         "default": "高",
         "options": ["自动", "低", "中", "高"]
       },
-      "count": {
-        "description": "默认生成张数",
+      "generate_count": {
+        "description": "默认生图张数",
         "type": "int",
         "default": 1,
-        "hint": "官方范围 1 到 10。"
+        "hint": "没有引用参考图时使用，官方范围 1 到 10。"
+      },
+      "edit_count": {
+        "description": "默认改图张数",
+        "type": "int",
+        "default": 1,
+        "hint": "引用到参考图时使用，官方范围 1 到 10。"
       }
     }
   },
@@ -85,7 +97,7 @@
           "max_images": {
             "description": "窗口内最多生成图片数；0 表示不限",
             "type": "int",
-            "default": 10
+            "default": 20
           }
         }
       },
@@ -180,7 +192,7 @@
       "include_generation_summary": {
         "description": "完成后发送参数和额度摘要",
         "type": "bool",
-        "default": true
+        "default": false
       }
     }
   }

@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator
 
-from .command.options import OFFICIAL_MAX_OUTPUT_COUNT, ImageOptions, OptionError, normalize_image_options
-from .command.parser import CommandParseError, parse_command_message
+from .command.options import IMAGE_MODEL, OFFICIAL_MAX_OUTPUT_COUNT, ImageOptions, OptionError, normalize_image_options
+from .command.parser import parse_command_message
 from .config import get_section, merge_config
 from .constants import COMMAND_NAMES, PARAMETER_USAGE_MESSAGE
 from .errors import UserFacingError
@@ -14,7 +14,7 @@ from .media.image_generator import ImageGenerator
 from .media.references import PreparedImage, ReferenceImageManager
 from .policy.access import evaluate_access
 from .policy.identity import identity_from_event, quota_scope
-from .policy.quota import QuotaExceededError, QuotaLedger
+from .policy.quota import QuotaExceededError, QuotaLedger, QuotaLimit
 from .storage.tempfiles import TempFileManager
 
 
@@ -64,8 +64,11 @@ class PreciseImageService:
                 yield TextReply("插件正在停止，暂不接受新的生图请求。")
                 return
 
-            options = self._normalize_options(command.prompt, command.options)
+            sources = await self.references.sources_from_event(event)
+            options = self._normalize_options(command.prompt, command.options, is_edit=bool(sources))
             scope, quota_key, quota_limit = quota_scope(identity, self.config)
+            if access_decision.is_admin:
+                quota_limit = _unlimited_quota_limit(quota_limit)
             reservation = await self.quota.reserve(
                 scope=scope,
                 key=quota_key,
@@ -74,13 +77,10 @@ class PreciseImageService:
                 metadata={
                     "user_id": identity.user_id,
                     "group_id": identity.group_id,
-                    "model": options.model,
+                    "model": IMAGE_MODEL,
                     "prompt_hash": hashlib.sha256(options.prompt.encode("utf-8")).hexdigest()[:16],
                 },
             )
-        except CommandParseError:
-            yield TextReply(PARAMETER_USAGE_MESSAGE)
-            return
         except OptionError as error:
             if getattr(error, "code", "") in {"PROMPT_REQUIRED", "INVALID_SIZE"}:
                 yield TextReply(PARAMETER_USAGE_MESSAGE)
@@ -101,7 +101,6 @@ class PreciseImageService:
         prepared_refs: list[PreparedImage] = []
         success_count = 0
         try:
-            sources = await self.references.sources_from_event(event)
             prepared_result = await self.references.prepare_images(sources)
             prepared_refs = prepared_result.images
             if sources and not prepared_refs:
@@ -128,7 +127,7 @@ class PreciseImageService:
                     if snapshot.remaining is None
                     else f"剩余 {snapshot.remaining} 张 / {snapshot.window_minutes} 分钟"
                 )
-                yield TextReply(f"完成：生成 {success_count}/{options.count} 张。模型 {options.model}，尺寸 {options.size}，{quota_text}。")
+                yield TextReply(f"完成：生成 {success_count}/{options.count} 张。模型 {IMAGE_MODEL}，尺寸 {options.size}，{quota_text}。")
         except UserFacingError as error:
             yield TextReply(str(error))
         except Exception as error:
@@ -142,7 +141,10 @@ class PreciseImageService:
     async def quota_status(self, event: Any) -> TextReply:
         try:
             identity = identity_from_event(event)
+            access_decision = evaluate_access(get_section(self.config, "permissions"), identity)
             scope, key, quota_limit = quota_scope(identity, self.config)
+            if access_decision.is_admin:
+                quota_limit = _unlimited_quota_limit(quota_limit)
             snapshot = await self.quota.snapshot(scope=scope, key=key, limit=quota_limit)
             if snapshot.remaining is None:
                 return TextReply("当前会话生图配额：不限额。")
@@ -155,9 +157,15 @@ class PreciseImageService:
             self.log.exception("Precise image quota status failed: %s", error)
             return TextReply("读取生图配额失败，请查看 AstrBot 日志。")
 
-    def _normalize_options(self, prompt: str, raw_options: dict[str, Any]) -> ImageOptions:
+    def _normalize_options(self, prompt: str, raw_options: dict[str, Any], *, is_edit: bool = False) -> ImageOptions:
         defaults = dict(get_section(self.config, "defaults"))
-        return normalize_image_options(prompt, raw_options, defaults, max_output_count=OFFICIAL_MAX_OUTPUT_COUNT)
+        return normalize_image_options(
+            prompt,
+            raw_options,
+            defaults,
+            max_output_count=OFFICIAL_MAX_OUTPUT_COUNT,
+            is_edit=is_edit,
+        )
 
     def begin_shutdown(self) -> None:
         self._closing = True
@@ -177,3 +185,7 @@ class PreciseImageService:
         except Exception as error:
             self.log.exception("Precise image quota release failed: %s", error)
             return False
+
+
+def _unlimited_quota_limit(limit: QuotaLimit) -> QuotaLimit:
+    return QuotaLimit(enabled=False, window_minutes=limit.window_minutes, max_images=0)

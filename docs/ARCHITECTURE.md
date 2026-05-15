@@ -23,17 +23,16 @@
 自动
 ```
 
-模型、背景和输出格式固定为 `gpt-image-2`、`opaque` 和 `png`。其他生图参数不从聊天消息解析，而由插件配置和默认值控制：
+模型、背景和输出格式固定为 `gpt-image-2`、`opaque` 和 `png`。聊天消息只解析提示词和可选末尾分辨率，可调默认值来自插件配置：
 
 | 参数 | 默认值 |
 | --- | --- |
-| 模型 | `gpt-image-2` |
 | 尺寸选项 | `自动` |
 | 自定义分辨率 | `1024x1024` |
 | 质量 | `高` |
-| 背景 | `opaque` |
-| 输出格式 | `png` |
-| 张数 | `1` |
+| 默认生图张数 | `1` |
+| 默认改图张数 | `1` |
+| 总并发图片请求数 | `8` |
 
 ### 1.2 核心模块结构
 
@@ -209,8 +208,8 @@ ImageReply(path="...")
 * 解析和校验图片尺寸。
 * 将尺寸下拉选项解析为 API 需要的 `auto`、预设尺寸或自定义尺寸。
 * 将中文质量选项解析为 API 需要的质量参数，并校验张数。
-* 固定模型、背景、输出格式和参考图保真度相关请求行为。
-* 生成最终 `ImageOptions`。
+* 按纯生图/引用图改图选择对应默认张数。
+* 生成最终 `ImageOptions(prompt, size, quality, count)`。
 
 虽然当前用户只允许传分辨率，但保留参数归一化仍然合理，因为默认质量、默认张数和尺寸选项仍来自插件配置；同时它隔离了模型接口约束，避免 `main.py` 直接散落参数校验。
 
@@ -257,6 +256,7 @@ AccessDecision(allowed=True, reason="")
 * 从 raw message / CQ 码中识别 reply 和 image 段。
 * 必要时通过平台 `get_msg` 拉取被引用消息。
 * 提取被引用消息里的全部图片来源。
+* 只在可信 AstrBot 组件里接受本地图片路径；raw CQ 文本和平台 action 字符串结果只接受远端 URL 或内联图片数据。
 * 下载 URL 图片或写入 base64/data URL 图片。
 * 将本地引用图片复制到插件临时目录，避免直接持有外部原始文件。
 * 按官方限制最多准备 16 张参考图，单张参考图最大 50MB。
@@ -269,9 +269,10 @@ AccessDecision(allowed=True, reason="")
 `core/media/image_generator.py` 负责 OpenAI-compatible Images API 调用和生成图临时落盘：
 
 * 根据是否存在参考图选择 `images.generate` 或 `images.edit`。
+* 将单次多图拆成多个 `n=1` 请求，并用插件级 semaphore 控制总并发。
 * 构建请求参数。
 * 固定使用 `gpt-image-2`、`opaque` 背景和 `png` 输出格式。
-* 对 `gpt-image-2` 编辑请求省略 `input_fidelity`，由模型自动以高保真处理参考图。
+* 编辑请求只传 `gpt-image-2` 当前需要的参数，由模型自动处理参考图保真度。
 * 打开参考图文件句柄并确保关闭。
 * 解析 `b64_json` 或 `url` 返回。
 * 将 `b64_json` 解码结果或远端 URL 下载结果写入插件临时目录。
@@ -346,7 +347,7 @@ flowchart TD
 event.message_str
   -> ParsedCommand(prompt, options)
   -> PreciseImageService
-  -> ImageOptions(prompt, model, size, quality, background, output_format, input_fidelity, count)
+  -> ImageOptions(prompt, size, quality, count)
   -> ImageGenerator
   -> client.images.generate/edit(...)
   -> ImageReply(path)
@@ -360,7 +361,7 @@ prompt
 size
 ```
 
-配置只控制默认尺寸选项、自定义分辨率、质量和张数；模型、背景、输出格式和 `input_fidelity` 是内部固定值。
+配置只控制默认尺寸选项、自定义分辨率、质量、生图/改图张数和总并发请求数；模型、背景、输出格式和参考图保真度行为是内部固定值。
 
 ### 4.2 用量状态
 

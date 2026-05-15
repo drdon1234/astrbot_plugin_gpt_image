@@ -31,34 +31,40 @@ pip install -r requirements.txt
 
 - `api.api_key`：OpenAI-compatible API Key。也可用环境变量 `OPENAI_API_KEY`。
 - `api.base_url`：兼容 `/v1` 的接口地址。
+- `api.max_concurrent_image_requests`：总并发图片请求数。一次生成多张会拆成多个 `n=1` 单张请求并发执行；这个值限制所有正在运行会话的单张图片请求总数。
 - `defaults.size_preset`：默认尺寸选项，下拉包含 `自动`、像素 + 比例 + 几K 的常用尺寸和 `自定义`。
 - `defaults.custom_size`：自定义分辨率，仅当 `defaults.size_preset = 自定义` 时生效。
-- `defaults.quality` / `defaults.count`：默认质量和张数；质量选项为 `自动`、`低`、`中`、`高`。
+- `defaults.quality`：默认质量，选项为 `自动`、`低`、`中`、`高`。
+- `defaults.generate_count` / `defaults.edit_count`：默认生图张数和默认改图张数；没有引用参考图时使用生图张数，引用到参考图时使用改图张数。
 - `quota.group.window_minutes` / `quota.group.max_images`：群聊窗口和张数。
 - `quota.private.window_minutes` / `quota.private.max_images`：私聊窗口和张数。
 - `permissions.admin_id`：管理员 ID，优先于所有白名单和黑名单。
 - `permissions.whitelist.*` / `permissions.blacklist.*`：用户/群聊白名单和黑名单。
 
-插件固定使用 `gpt-image-2`、`opaque` 背景和 `png` 输出格式。参考图数量、参考图大小、生成张数上限和尺寸规则按官方限制内置，不作为配置项；图片下载超时固定为 30 秒。
+插件固定使用 `gpt-image-2`、`opaque` 背景和 `png` 输出格式。参考图数量、参考图大小、生成张数上限和尺寸规则按官方限制内置，不作为配置项；图片下载超时固定为 30 秒。多张图不会通过一次请求返回，而是并发发送多个单张请求，并受 `api.max_concurrent_image_requests` 总并发限制。
 
 `max_images = 0` 表示该作用域不限额。群聊配额按群号计数，私聊配额按用户号计数。
 
 权限优先级固定为：管理员 > 个人白名单 > 个人黑名单 > 群组白名单 > 群组黑名单。白名单启用但没有命中时，普通用户会被拒绝；白名单未启用时，未命中黑名单的普通用户默认放行。
+
+管理员不受群聊或私聊配额限制，`/gimg_status` 会显示为不限额。
 
 ## 使用
 
 ```text
 /gimg 一只玻璃材质的白色机械鸟，产品摄影风格
 /gimg 赛博茶馆室内设计 1536x1024
+/gimg cinematic high-quality portrait -- dark studio lighting 1024x1024
+/gimg cinematic portrait 1280x720 16:9 1K
 /gimg 赛博茶馆室内设计 自动
 /生图 把参考图中的杯子改成红色 1536*1024
 /生图 一个银白色机械鸟停在玻璃树枝上 1536×1024
 /gimg_status
 ```
 
-分辨率必须放在提示词最后，用空格分隔。不支持 `尺寸 1536x1024`、`质量 高`、`张数 2` 这类聊天参数；这些值由插件默认配置控制。
+分辨率必须放在提示词最后，用空格分隔。触发词之后、末尾分辨率之前的全部内容都会作为提示词，因此英文提示词可以正常包含空格、连字符或 `--` 片段。`质量 高`、`张数 2` 这类聊天参数不会作为配置项解析；这些值由插件默认配置控制。
 
-如果用户只发送 `/生图`、使用命令行参数写法，或分辨率超出限制，插件会发送固定参数提示文本。
+如果用户只发送 `/生图`，或分辨率超出限制，插件会发送固定参数提示文本。
 
 当用户回复/引用一条包含图片的消息再执行 `/gimg`，插件会尽力提取被引用消息里的全部图片作为参考图。没有引用图时默认纯文本生图。跨平台的引用消息结构不完全一致，OneBot v11 会尝试通过 `get_msg` 拉取被引用消息；其他平台如果事件链或原始消息已包含引用内容，也会自动识别。
 

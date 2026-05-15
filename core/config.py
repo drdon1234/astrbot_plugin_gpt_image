@@ -9,18 +9,20 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "api_key": "",
         "base_url": "https://api.openai.com/v1",
         "request_timeout_seconds": 120,
+        "max_concurrent_image_requests": 8,
     },
     "defaults": {
         "size_preset": "自动",
         "custom_size": "1024x1024",
         "quality": "高",
-        "count": 1,
+        "generate_count": 1,
+        "edit_count": 1,
     },
     "quota": {
         "group": {
             "enabled": True,
             "window_minutes": 60,
-            "max_images": 10,
+            "max_images": 20,
         },
         "private": {
             "enabled": True,
@@ -43,7 +45,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "behavior": {
         "send_start_notice": True,
-        "include_generation_summary": True,
+        "include_generation_summary": False,
     },
 }
 
@@ -52,7 +54,6 @@ def merge_config(raw: Mapping[str, Any] | None) -> dict[str, Any]:
     raw = deepcopy(dict(raw or {}))
     merged = deepcopy(DEFAULT_CONFIG)
     _deep_merge(merged, raw)
-    _drop_removed_config_keys(merged)
     return merged
 
 
@@ -100,19 +101,9 @@ def int_value(value: Any, fallback: int, minimum: int | None = None, maximum: in
 
 def _deep_merge(target: dict[str, Any], source: Mapping[str, Any]) -> None:
     for key, value in source.items():
+        if key not in target:
+            continue
         if isinstance(value, Mapping) and isinstance(target.get(key), dict):
             _deep_merge(target[key], value)
         else:
             target[key] = value
-
-
-def _drop_removed_config_keys(config: dict[str, Any]) -> None:
-    api = get_section(config, "api")
-    api.pop("image_model", None)
-
-    defaults = get_section(config, "defaults")
-    for key in ("size", "background", "output_format", "input_fidelity"):
-        defaults.pop(key, None)
-
-    config.pop("limits", None)
-    config.pop("access", None)

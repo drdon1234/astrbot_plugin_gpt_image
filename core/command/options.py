@@ -48,23 +48,9 @@ SIZE_PRESET_VALUES = {
     "1:1 4k": "2880x2880",
     "自定义": "custom",
 }
-SIZE_PRESET_OPTIONS = (
-    "自动",
-    "1280x720 16:9 1K",
-    "720x1280 9:16 1K",
-    "1024x1024 1:1 1K",
-    "2560x1440 16:9 2K",
-    "1440x2560 9:16 2K",
-    "2048x2048 1:1 2K",
-    "3840x2160 16:9 4K",
-    "2160x3840 9:16 4K",
-    "2880x2880 1:1 4K",
-    "自定义",
-)
 SIZE_PRESET_ALIASES = {
     **SIZE_PRESET_VALUES,
     "auto": "auto",
-    "custom": "custom",
     **{size: size for size in POPULAR_IMAGE_SIZES},
 }
 
@@ -104,12 +90,8 @@ class ParsedImageSize:
 @dataclass(frozen=True)
 class ImageOptions:
     prompt: str
-    model: str
     size: str
     quality: str
-    background: str
-    output_format: str
-    input_fidelity: str
     count: int
 
 
@@ -184,22 +166,13 @@ def normalize_choice(value: Any, allowed: Mapping[str, str], fallback: str, labe
     raise OptionError(f"{label} 只能是 {allowed_text}。")
 
 
-def normalize_count(value: Any, fallback: int, max_count: int) -> int:
-    try:
-        parsed = int(str(value if value is not None else fallback).strip())
-    except (TypeError, ValueError):
-        raise OptionError("生成张数需要是整数。", "INVALID_COUNT") from None
-    if parsed < 1 or parsed > max_count:
-        raise OptionError(f"生成张数需要在 1 到 {max_count} 之间。", "INVALID_COUNT")
-    return parsed
-
-
 def normalize_image_options(
     prompt: str,
     raw_options: Mapping[str, Any],
     defaults: Mapping[str, Any],
     *,
     max_output_count: int = OFFICIAL_MAX_OUTPUT_COUNT,
+    is_edit: bool = False,
 ) -> ImageOptions:
     prompt = str(prompt or "").strip()
     if not prompt:
@@ -213,18 +186,13 @@ def normalize_image_options(
         "quality",
         QUALITY_LABELS,
     )
-    input_fidelity = "auto"
-    fallback_count = int_value(defaults.get("count"), 1, 1, max_output_count)
-    count = normalize_count(raw_options.get("count"), fallback_count, max_output_count)
+    count_key = "edit_count" if is_edit else "generate_count"
+    count = int_value(defaults.get(count_key), 1, 1, max_output_count)
 
     return ImageOptions(
         prompt=prompt,
-        model=IMAGE_MODEL,
         size=size,
         quality=quality,
-        background=DEFAULT_BACKGROUND,
-        output_format=DEFAULT_OUTPUT_FORMAT,
-        input_fidelity=input_fidelity,
         count=count,
     )
 

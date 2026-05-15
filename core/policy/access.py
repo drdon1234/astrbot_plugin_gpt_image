@@ -18,6 +18,7 @@ class AccessIdentity:
 class AccessDecision:
     allowed: bool
     reason: str = ""
+    is_admin: bool = False
 
 
 def evaluate_access(config: Mapping[str, Any], identity: AccessIdentity) -> AccessDecision:
@@ -26,7 +27,7 @@ def evaluate_access(config: Mapping[str, Any], identity: AccessIdentity) -> Acce
 
     admin_id = str(config.get("admin_id") or "").strip()
     if user_id and admin_id and user_id == admin_id:
-        return AccessDecision(True)
+        return AccessDecision(True, is_admin=True)
 
     whitelist = _mapping(config.get("whitelist"))
     blacklist = _mapping(config.get("blacklist"))

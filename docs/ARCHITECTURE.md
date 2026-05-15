@@ -172,7 +172,7 @@ ImageReply(path="...")
 
 `core/config.py` 提供：
 
-* `DEFAULT_CONFIG`：插件默认配置。
+* `DEFAULT_CONFIG`：从 `_conf_schema.json` 生成的插件默认配置，schema 是配置默认值的单一来源。
 * `merge_config()`：将 AstrBot 配置覆盖到默认配置。
 * `get_section()`：安全读取配置分组。
 * `string_list()`、`bool_value()`、`int_value()`：配置类型归一化。

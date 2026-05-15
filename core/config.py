@@ -1,54 +1,9 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Mapping
-
-
-DEFAULT_CONFIG: dict[str, Any] = {
-    "api": {
-        "api_key": "",
-        "base_url": "https://api.openai.com/v1",
-        "request_timeout_seconds": 120,
-        "max_concurrent_image_requests": 8,
-    },
-    "defaults": {
-        "size_preset": "自动",
-        "custom_size": "1024x1024",
-        "quality": "高",
-        "generate_count": 1,
-        "edit_count": 1,
-    },
-    "quota": {
-        "group": {
-            "enabled": True,
-            "window_minutes": 60,
-            "max_images": 20,
-        },
-        "private": {
-            "enabled": True,
-            "window_minutes": 60,
-            "max_images": 5,
-        },
-    },
-    "permissions": {
-        "admin_id": "",
-        "whitelist": {
-            "enable": False,
-            "user": [],
-            "group": [],
-        },
-        "blacklist": {
-            "enable": False,
-            "user": [],
-            "group": [],
-        },
-    },
-    "behavior": {
-        "send_start_notice": True,
-        "include_generation_summary": False,
-    },
-}
-
 
 def merge_config(raw: Mapping[str, Any] | None) -> dict[str, Any]:
     raw = deepcopy(dict(raw or {}))
@@ -107,3 +62,40 @@ def _deep_merge(target: dict[str, Any], source: Mapping[str, Any]) -> None:
             _deep_merge(target[key], value)
         else:
             target[key] = value
+
+
+def _load_schema_defaults() -> dict[str, Any]:
+    schema_path = Path(__file__).resolve().parents[1] / "_conf_schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    return _defaults_from_schema_items(schema)
+
+
+def _defaults_from_schema_items(items: Mapping[str, Any]) -> dict[str, Any]:
+    defaults: dict[str, Any] = {}
+    for key, node in items.items():
+        if not isinstance(node, Mapping):
+            continue
+        defaults[key] = _default_from_schema_node(node)
+    return defaults
+
+
+def _default_from_schema_node(node: Mapping[str, Any]) -> Any:
+    if "default" in node:
+        return deepcopy(node["default"])
+    node_type = str(node.get("type") or "").strip().lower()
+    if node_type == "object":
+        return _defaults_from_schema_items(_mapping(node.get("items")))
+    if node_type == "list":
+        return []
+    if node_type == "bool":
+        return False
+    if node_type == "int":
+        return 0
+    return ""
+
+
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+DEFAULT_CONFIG: dict[str, Any] = _load_schema_defaults()

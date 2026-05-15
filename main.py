@@ -25,7 +25,7 @@ from .core.service import ImageReply, PreciseImageService, TextReply
 from .core.storage.paths import resolve_plugin_data_dir
 
 
-@register(PLUGIN_NAME, "Independent", "精细参数控制的 OpenAI-compatible 生图插件，支持群聊/私聊配额和黑白名单。", "0.1.0")
+@register(PLUGIN_NAME, "Independent", "精细参数控制的 OpenAI-compatible 生图插件，支持群聊/私聊配额和黑白名单。", "0.1.2")
 class PreciseImagePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig | None = None):
         super().__init__(context)

@@ -1,0 +1,187 @@
+{
+  "api": {
+    "description": "OpenAI-compatible 图片接口",
+    "type": "object",
+    "items": {
+      "api_key": {
+        "description": "API Key",
+        "type": "string",
+        "hint": "也可以通过环境变量 OPENAI_API_KEY 提供。"
+      },
+      "base_url": {
+        "description": "Base URL",
+        "type": "string",
+        "default": "https://api.openai.com/v1",
+        "hint": "兼容 OpenAI SDK 的 /v1 地址。"
+      },
+      "request_timeout_seconds": {
+        "description": "生图请求超时时间（秒）",
+        "type": "int",
+        "default": 120
+      }
+    }
+  },
+  "defaults": {
+    "description": "默认生图参数",
+    "type": "object",
+    "items": {
+      "size_preset": {
+        "description": "默认尺寸选项",
+        "type": "string",
+        "default": "auto",
+        "options": [
+          "auto",
+          "1280x720",
+          "720x1280",
+          "1024x1024",
+          "2560x1440",
+          "1440x2560",
+          "2048x2048",
+          "3840x2160",
+          "2160x3840",
+          "2880x2880",
+          "custom"
+        ],
+        "hint": "auto 为自动；1280x720/720x1280/1024x1024 为 1K；2560x1440/1440x2560/2048x2048 为 2K；3840x2160/2160x3840/2880x2880 为 4K 像素预算内的官方有效尺寸；custom 使用自定义分辨率。"
+      },
+      "custom_size": {
+        "description": "自定义分辨率",
+        "type": "string",
+        "default": "1024x1024",
+        "hint": "仅当默认尺寸选项为 custom 时生效；支持 auto 或 宽x高，宽高需满足 gpt-image-2 官方尺寸约束。"
+      },
+      "quality": {
+        "description": "默认质量",
+        "type": "string",
+        "default": "high",
+        "options": ["auto", "low", "medium", "high"]
+      },
+      "count": {
+        "description": "默认生成张数",
+        "type": "int",
+        "default": 1,
+        "hint": "官方范围 1 到 10。"
+      }
+    }
+  },
+  "quota": {
+    "description": "群聊和私聊生图频率限制",
+    "type": "object",
+    "items": {
+      "group": {
+        "description": "群聊配额（按群号计数）",
+        "type": "object",
+        "items": {
+          "enabled": {
+            "description": "启用群聊配额",
+            "type": "bool",
+            "default": true
+          },
+          "window_minutes": {
+            "description": "窗口分钟数",
+            "type": "int",
+            "default": 60
+          },
+          "max_images": {
+            "description": "窗口内最多生成图片数；0 表示不限",
+            "type": "int",
+            "default": 10
+          }
+        }
+      },
+      "private": {
+        "description": "私聊配额（按用户号计数）",
+        "type": "object",
+        "items": {
+          "enabled": {
+            "description": "启用私聊配额",
+            "type": "bool",
+            "default": true
+          },
+          "window_minutes": {
+            "description": "窗口分钟数",
+            "type": "int",
+            "default": 60
+          },
+          "max_images": {
+            "description": "窗口内最多生成图片数；0 表示不限",
+            "type": "int",
+            "default": 5
+          }
+        }
+      }
+    }
+  },
+  "permissions": {
+    "description": "权限控制",
+    "type": "object",
+    "hint": "优先级：管理员 > 个人白名单 > 个人黑名单 > 群组白名单 > 群组黑名单",
+    "items": {
+      "admin_id": {
+        "description": "管理员ID",
+        "type": "string",
+        "hint": "最高权限，优先于所有白名单和黑名单。",
+        "default": ""
+      },
+      "whitelist": {
+        "description": "白名单",
+        "type": "object",
+        "hint": "启用但不配置名单会禁止普通用户使用。",
+        "items": {
+          "enable": {
+            "description": "启用",
+            "type": "bool",
+            "default": false
+          },
+          "user": {
+            "description": "用户ID列表",
+            "type": "list",
+            "default": []
+          },
+          "group": {
+            "description": "群ID列表",
+            "type": "list",
+            "default": []
+          }
+        }
+      },
+      "blacklist": {
+        "description": "黑名单",
+        "type": "object",
+        "items": {
+          "enable": {
+            "description": "启用",
+            "type": "bool",
+            "default": false
+          },
+          "user": {
+            "description": "用户ID列表",
+            "type": "list",
+            "default": []
+          },
+          "group": {
+            "description": "群ID列表",
+            "type": "list",
+            "default": []
+          }
+        }
+      }
+    }
+  },
+  "behavior": {
+    "description": "发送行为",
+    "type": "object",
+    "items": {
+      "send_start_notice": {
+        "description": "开始生图时发送提示",
+        "type": "bool",
+        "default": true
+      },
+      "include_generation_summary": {
+        "description": "完成后发送参数和额度摘要",
+        "type": "bool",
+        "default": true
+      }
+    }
+  }
+}

@@ -4,7 +4,7 @@ COMMAND_NAMES = ["gimg", "生图", "画图"]
 
 PARAMETER_USAGE_MESSAGE = (
     "请选择合法参数（触发词、提示词、分辨率之间用空格分隔）\n"
-    "生图 <提示词> <分辨率>（分辨率支持 auto 或 长×宽 / 长*宽 / 长x宽，单边不超过 3840）"
+    "生图 <提示词> <分辨率>（分辨率支持 自动 或 长×宽 / 长*宽 / 长x宽，单边不超过 3840）"
 )
 
 IMAGE_MIME_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}

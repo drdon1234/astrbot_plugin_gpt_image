@@ -11,9 +11,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "request_timeout_seconds": 120,
     },
     "defaults": {
-        "size_preset": "auto",
+        "size_preset": "自动",
         "custom_size": "1024x1024",
-        "quality": "high",
+        "quality": "高",
         "count": 1,
     },
     "quota": {

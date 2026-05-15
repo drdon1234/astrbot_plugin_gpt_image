@@ -31,9 +31,9 @@ pip install -r requirements.txt
 
 - `api.api_key`：OpenAI-compatible API Key。也可用环境变量 `OPENAI_API_KEY`。
 - `api.base_url`：兼容 `/v1` 的接口地址。
-- `defaults.size_preset`：默认尺寸选项，下拉包含 `auto`、16:9 / 9:16 / 1:1 的 1K、2K、4K 常用尺寸和 `custom`。
-- `defaults.custom_size`：自定义分辨率，仅当 `defaults.size_preset = custom` 时生效。
-- `defaults.quality` / `defaults.count`：默认质量和张数。
+- `defaults.size_preset`：默认尺寸选项，下拉包含 `自动`、像素 + 比例 + 几K 的常用尺寸和 `自定义`。
+- `defaults.custom_size`：自定义分辨率，仅当 `defaults.size_preset = 自定义` 时生效。
+- `defaults.quality` / `defaults.count`：默认质量和张数；质量选项为 `自动`、`低`、`中`、`高`。
 - `quota.group.window_minutes` / `quota.group.max_images`：群聊窗口和张数。
 - `quota.private.window_minutes` / `quota.private.max_images`：私聊窗口和张数。
 - `permissions.admin_id`：管理员 ID，优先于所有白名单和黑名单。
@@ -50,7 +50,7 @@ pip install -r requirements.txt
 ```text
 /gimg 一只玻璃材质的白色机械鸟，产品摄影风格
 /gimg 赛博茶馆室内设计 1536x1024
-/gimg 赛博茶馆室内设计 auto
+/gimg 赛博茶馆室内设计 自动
 /生图 把参考图中的杯子改成红色 1536*1024
 /生图 一个银白色机械鸟停在玻璃树枝上 1536×1024
 /gimg_status
@@ -64,7 +64,7 @@ pip install -r requirements.txt
 
 ## 参数约束
 
-尺寸支持 `auto` 或 `宽x高`。插件内置 `gpt-image-2` 官方尺寸校验：
+尺寸支持 `自动`、`auto` 或 `宽x高`。插件内置 `gpt-image-2` 官方尺寸校验：
 
 - 单边最大 3840。
 - 宽高都需要是 16 的倍数。
@@ -73,11 +73,17 @@ pip install -r requirements.txt
 
 默认尺寸下拉包含：
 
-- `auto`
-- 16:9：`1280x720`、`2560x1440`、`3840x2160`
-- 9:16：`720x1280`、`1440x2560`、`2160x3840`
-- 1:1：`1024x1024`、`2048x2048`、`2880x2880`
-- `custom`：读取 `defaults.custom_size`
+- `自动`
+- `1280x720 16:9 1K`
+- `720x1280 9:16 1K`
+- `1024x1024 1:1 1K`
+- `2560x1440 16:9 2K`
+- `1440x2560 9:16 2K`
+- `2048x2048 1:1 2K`
+- `3840x2160 16:9 4K`
+- `2160x3840 9:16 4K`
+- `2880x2880 1:1 4K`
+- `自定义`：读取 `defaults.custom_size`
 
 单次最多生成 10 张，最多使用 16 张参考图，单张参考图最大 50MB。
 

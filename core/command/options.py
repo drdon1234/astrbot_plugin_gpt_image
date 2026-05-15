@@ -26,7 +26,47 @@ POPULAR_IMAGE_SIZES = (
     "2880x2880",
 )
 
-SIZE_PRESET_OPTIONS = ("auto", *POPULAR_IMAGE_SIZES, "custom")
+SIZE_PRESET_VALUES = {
+    "自动": "auto",
+    "1280x720 16:9 1k": "1280x720",
+    "720x1280 9:16 1k": "720x1280",
+    "1024x1024 1:1 1k": "1024x1024",
+    "2560x1440 16:9 2k": "2560x1440",
+    "1440x2560 9:16 2k": "1440x2560",
+    "2048x2048 1:1 2k": "2048x2048",
+    "3840x2160 16:9 4k": "3840x2160",
+    "2160x3840 9:16 4k": "2160x3840",
+    "2880x2880 1:1 4k": "2880x2880",
+    "16:9 1k": "1280x720",
+    "9:16 1k": "720x1280",
+    "1:1 1k": "1024x1024",
+    "16:9 2k": "2560x1440",
+    "9:16 2k": "1440x2560",
+    "1:1 2k": "2048x2048",
+    "16:9 4k": "3840x2160",
+    "9:16 4k": "2160x3840",
+    "1:1 4k": "2880x2880",
+    "自定义": "custom",
+}
+SIZE_PRESET_OPTIONS = (
+    "自动",
+    "1280x720 16:9 1K",
+    "720x1280 9:16 1K",
+    "1024x1024 1:1 1K",
+    "2560x1440 16:9 2K",
+    "1440x2560 9:16 2K",
+    "2048x2048 1:1 2K",
+    "3840x2160 16:9 4K",
+    "2160x3840 9:16 4K",
+    "2880x2880 1:1 4K",
+    "自定义",
+)
+SIZE_PRESET_ALIASES = {
+    **SIZE_PRESET_VALUES,
+    "auto": "auto",
+    "custom": "custom",
+    **{size: size for size in POPULAR_IMAGE_SIZES},
+}
 
 IMAGE_MODEL = "gpt-image-2"
 DEFAULT_BACKGROUND = "opaque"
@@ -34,7 +74,17 @@ DEFAULT_OUTPUT_FORMAT = "png"
 DEFAULT_CUSTOM_SIZE = "1024x1024"
 OFFICIAL_MAX_OUTPUT_COUNT = 10
 
-QUALITY_OPTIONS = {"auto", "low", "medium", "high"}
+QUALITY_LABELS = ("自动", "低", "中", "高")
+QUALITY_VALUES = {
+    "自动": "auto",
+    "低": "low",
+    "中": "medium",
+    "高": "high",
+    "auto": "auto",
+    "low": "low",
+    "medium": "medium",
+    "high": "high",
+}
 
 
 class OptionError(ValueError):
@@ -73,7 +123,7 @@ def parse_image_size(value: Any) -> ParsedImageSize | None:
         .replace("＊", "x")
         .replace(" ", "")
     )
-    if option == "auto":
+    if option in {"auto", "自动"}:
         return ParsedImageSize("auto", auto=True)
 
     parts = option.split("x")
@@ -88,7 +138,7 @@ def parse_image_size(value: Any) -> ParsedImageSize | None:
 def validate_image_size(value: Any) -> tuple[bool, str, ParsedImageSize | None]:
     parsed = parse_image_size(value)
     if parsed is None:
-        return False, "尺寸格式需要是 auto 或 宽x高，例如 1536x1024。", None
+        return False, "尺寸格式需要是 自动、auto 或 宽x高，例如 1536x1024。", None
     if parsed.auto:
         return True, "", parsed
 
@@ -117,19 +167,20 @@ def normalize_image_size(value: Any, fallback: str = "1024x1024") -> str:
 
 
 def resolve_default_image_size(defaults: Mapping[str, Any]) -> str:
-    preset = str(defaults.get("size_preset") or "auto").strip().lower()
-    if preset == "custom":
+    preset = _normalize_config_text(defaults.get("size_preset") or "自动")
+    resolved = SIZE_PRESET_ALIASES.get(preset)
+    if resolved == "custom":
         return str(defaults.get("custom_size") or DEFAULT_CUSTOM_SIZE)
-    if preset in SIZE_PRESET_OPTIONS:
-        return preset
-    return preset
+    if resolved:
+        return resolved
+    return str(defaults.get("size_preset") or "自动").strip()
 
 
-def normalize_choice(value: Any, allowed: set[str], fallback: str, label: str) -> str:
-    option = str(value or fallback).strip().lower()
+def normalize_choice(value: Any, allowed: Mapping[str, str], fallback: str, label: str, labels: tuple[str, ...]) -> str:
+    option = _normalize_config_text(value or fallback)
     if option in allowed:
-        return option
-    allowed_text = ", ".join(sorted(allowed))
+        return allowed[option]
+    allowed_text = ", ".join(labels)
     raise OptionError(f"{label} 只能是 {allowed_text}。")
 
 
@@ -155,7 +206,13 @@ def normalize_image_options(
         raise OptionError("请提供生图提示词。", "PROMPT_REQUIRED")
 
     size = normalize_image_size(raw_options.get("size"), resolve_default_image_size(defaults))
-    quality = normalize_choice(raw_options.get("quality"), QUALITY_OPTIONS, str(defaults.get("quality") or "auto"), "quality")
+    quality = normalize_choice(
+        raw_options.get("quality"),
+        QUALITY_VALUES,
+        str(defaults.get("quality") or "自动"),
+        "quality",
+        QUALITY_LABELS,
+    )
     input_fidelity = "auto"
     fallback_count = int_value(defaults.get("count"), 1, 1, max_output_count)
     count = normalize_count(raw_options.get("count"), fallback_count, max_output_count)
@@ -170,3 +227,7 @@ def normalize_image_options(
         input_fidelity=input_fidelity,
         count=count,
     )
+
+
+def _normalize_config_text(value: Any) -> str:
+    return str(value or "").strip().lower().replace("：", ":")

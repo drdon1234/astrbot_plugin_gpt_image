@@ -56,8 +56,8 @@ def strip_command_prefix(message: str, command_names: Iterable[str]) -> str:
 
 def _parse_size_token(token: str) -> str | None:
     normalized = _normalize_token(token)
-    if normalized == "auto":
-        return normalized
+    if normalized in {"auto", "自动"}:
+        return "auto"
     if not _looks_like_size(normalized):
         return None
     return normalized.replace("×", "x").replace("*", "x").replace("＊", "x")

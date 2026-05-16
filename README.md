@@ -1,119 +1,93 @@
-# 精细生图 AstrBot 插件
+<div align="center">
 
-这是一个独立 AstrBot 插件项目，可以放到 `AstrBot/data/plugins/astrbot_plugin_gpt_image` 使用。它提供：
+![:name](https://count.getloli.com/@astrbot_plugin_gpt_image?name=astrbot_plugin_gpt_image&theme=minecraft&padding=6&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
 
-- OpenAI-compatible 图片接口调用，默认模型 `gpt-image-2`。
-- 用户命令只支持一个可选参数：末尾分辨率。
-- 群聊和私聊独立配额：按“每多少分钟最多多少张图”限制。
-- 管理员、白名单、黑名单权限控制。
-- 回复/引用含图消息时，自动提取引用消息里的全部图片作为参考图。
-- 参考图和生成图只写入 `tempfile` 创建的临时目录，发送或请求结束后删除，插件终止时兜底清理。
-- 使用 AstrBot 的 `logger` 接口，不直接调用 Python 标准日志模块。
+# GPT Image 精细生图
 
-## 安装
+_✨ 直接生图，引用图片改图 ✨_
 
-```bash
-cd AstrBot/data/plugins
-git clone <this-repo-url> astrbot_plugin_gpt_image
-```
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![AstrBot](https://img.shields.io/badge/AstrBot-Plugin-orange.svg)](https://github.com/AstrBotDevs/AstrBot)
+[![Version](https://img.shields.io/badge/Version-v0.1.4-green.svg)](https://github.com/drdon1234/astrbot_plugin_gpt_image)
 
-或者直接把本目录复制到 `AstrBot/data/plugins/astrbot_plugin_gpt_image`。
+</div>
 
-AstrBot 会根据 `requirements.txt` 安装依赖；如果手动安装：
+---
 
-```bash
-pip install -r requirements.txt
-```
+## 🚀 快速开始
 
-## 配置
+1. 在 AstrBot 插件市场安装
+2. 在插件配置中填写图片接口 API Key
+3. 发送 `生图 <提示词>` 或 `画图 <提示词>`
+4. 回复图片再发送触发词，即可按引用图改图
 
-在 AstrBot WebUI 的插件配置中填写：
+---
 
-- `api.api_key`：OpenAI-compatible API Key。也可用环境变量 `OPENAI_API_KEY`。
-- `api.base_url`：兼容 `/v1` 的接口地址。
-- `api.max_concurrent_image_requests`：总并发图片请求数。一次生成多张会拆成多个 `n=1` 单张请求并发执行；这个值限制所有正在运行会话的单张图片请求总数。
-- `defaults.size_preset`：默认尺寸选项，下拉包含 `自动`、像素 + 比例 + 几K 的常用尺寸和 `自定义`。
-- `defaults.custom_size`：自定义分辨率，仅当 `defaults.size_preset = 自定义` 时生效。
-- `defaults.quality`：默认质量，选项为 `自动`、`低`、`中`、`高`。
-- `defaults.generate_count` / `defaults.edit_count`：默认生图张数和默认改图张数；没有引用参考图时使用生图张数，引用到参考图时使用改图张数。
-- `quota.group.window_minutes` / `quota.group.max_images`：群聊窗口和张数。
-- `quota.private.window_minutes` / `quota.private.max_images`：私聊窗口和张数。
-- `permissions.admin_id`：管理员 ID，优先于所有白名单和黑名单。
-- `permissions.whitelist.*` / `permissions.blacklist.*`：用户/群聊白名单和黑名单。
+## ✨ 功能
 
-插件固定使用 `gpt-image-2`、`opaque` 背景和 `png` 输出格式。参考图数量、参考图大小、生成张数上限和尺寸规则按官方限制内置，不作为配置项；图片下载超时固定为 30 秒。多张图不会通过一次请求返回，而是并发发送多个单张请求，并受 `api.max_concurrent_image_requests` 总并发限制。
+- 文生图与引用图片改图
+- 默认触发词：`生图`、`画图`
+- 可选末尾分辨率：`1024x1024`，或 `16:9 2K` / `横屏 2K`
+- 可配置默认尺寸、质量、生图张数、改图张数
+- 支持群聊/私聊额度、管理员、白名单、黑名单
+- 多人使用时可控制总并发
 
-`max_images = 0` 表示该作用域不限额。群聊配额按群号计数，私聊配额按用户号计数。
+---
 
-权限优先级固定为：管理员 > 个人白名单 > 个人黑名单 > 群组白名单 > 群组黑名单。白名单启用但没有命中时，普通用户会被拒绝；白名单未启用时，未命中黑名单的普通用户默认放行。
-
-管理员不受群聊或私聊配额限制，`/gimg_status` 会显示为不限额。
-
-## 使用
+## 💬 示例
 
 ```text
-/gimg 一只玻璃材质的白色机械鸟，产品摄影风格
-/gimg 赛博茶馆室内设计 1536x1024
-/gimg cinematic high-quality portrait -- dark studio lighting 1024x1024
-/gimg cinematic portrait 1280x720 16:9 1K
-/gimg 赛博茶馆室内设计 自动
-/生图 把参考图中的杯子改成红色 1536*1024
-/生图 一个银白色机械鸟停在玻璃树枝上 1536×1024
-/gimg_status
+生图 一只玻璃材质的白色机械鸟，产品摄影风格
+生图 赛博茶馆室内设计 1536x1024
+生图 电影感城市夜景 横屏 2K
+画图 暗色调人物肖像 1024x1024
+生图额度
 ```
 
-分辨率必须放在提示词最后，用空格分隔。触发词之后、末尾分辨率之前的全部内容都会作为提示词，因此英文提示词可以正常包含空格、连字符或 `--` 片段。`质量 高`、`张数 2` 这类聊天参数不会作为配置项解析；这些值由插件默认配置控制。
+提示词中可以正常使用英文空格、连字符和 `--`。分辨率只在放到末尾时生效，其余内容都会作为提示词。
 
-如果用户只发送 `/生图`，或分辨率超出限制，插件会发送固定参数提示文本。
+---
 
-当用户回复/引用一条包含图片的消息再执行 `/gimg`，插件会尽力提取被引用消息里的全部图片作为参考图。没有引用图时默认纯文本生图。跨平台的引用消息结构不完全一致，OneBot v11 会尝试通过 `get_msg` 拉取被引用消息；其他平台如果事件链或原始消息已包含引用内容，也会自动识别。
+## 📐 分辨率
 
-## 参数约束
+聊天里只支持两种写法：
 
-尺寸支持 `自动`、`auto` 或 `宽x高`。插件内置 `gpt-image-2` 官方尺寸校验：
+- 具体像素：`1536x1024`、`1536*1024`、`1536×1024`
+- 比例/方向 + 几K：`16:9 2K`、`9:16 1K`、`1:1 4K`、`横屏 2K`、`竖屏 1K`、`方图 4K`
 
-- 单边最大 3840。
-- 宽高都需要是 16 的倍数。
-- 宽高比不超过 3:1。
-- 总像素在 655360 到 8294400 之间。
+常用比例对应像素：
 
-默认尺寸下拉包含：
+| 输入 | 1K | 2K | 4K |
+| --- | --- | --- | --- |
+| `16:9` / `横屏` | `1280x720` | `2560x1440` | `3840x2160` |
+| `9:16` / `竖屏` | `720x1280` | `1440x2560` | `2160x3840` |
+| `1:1` / `方图` | `1024x1024` | `2048x2048` | `2880x2880` |
 
-- `自动`
-- `1280x720 16:9 1K`
-- `720x1280 9:16 1K`
-- `1024x1024 1:1 1K`
-- `2560x1440 16:9 2K`
-- `1440x2560 9:16 2K`
-- `2048x2048 1:1 2K`
-- `3840x2160 16:9 4K`
-- `2160x3840 9:16 4K`
-- `2880x2880 1:1 4K`
-- `自定义`：读取 `defaults.custom_size`
+`自动` 只用于插件默认尺寸配置，不作为聊天分辨率。`1280x720 16:9 1K` 这类组合写法只用于配置下拉，不作为聊天输入。
 
-单次最多生成 10 张，最多使用 16 张参考图，单张参考图最大 50MB。
+---
 
-## 数据与临时文件
+## 🖼️ 改图
 
-插件只把配额账本作为持久数据放在：
+回复或引用一条图片消息后发送：
 
 ```text
-AstrBot/data/plugin_data/astrbot_plugin_gpt_image/
+生图 把人物改成暗色调电影感，保留姿势和构图
 ```
 
-其中 `usage.json` 用于配额记账。
+插件会自动读取引用图。群聊引用别人消息时自动带出的前置 @ 会被忽略。
 
-引用图下载、base64 参考图、本地参考图副本、生成图下载或解码结果都会写入 Python `tempfile` 创建的插件临时目录。生成图在 AstrBot 发送后立即删除；插件终止时会拒绝新请求、取消进行中的生图任务，并兜底删除临时目录。
+---
 
-## 本地检查
+## ⚙️ 配置与注意
 
-不包含测试目录；可以用下面命令做基础语法和配置检查：
+通常只需要关注：
 
-```bash
-python -m compileall .
-python -c "import json; json.load(open('_conf_schema.json', encoding='utf-8')); print('json ok')"
-```
+- 图片接口：API Key 和接口地址
+- 默认效果：尺寸、质量、生图张数、改图张数
+- 使用控制：触发词、额度、权限、并发
 
-## 许可证
+插件默认使用 `gpt-image-2`，输出 PNG 图片。
+默认尺寸可在配置里选择自动、常用尺寸或自定义。生图和改图张数分开配置；多图会并发生成，接口慢时需要等待；引用图过大、不可访问或来自内网地址时会被跳过或提示不可用。
 
-本项目基于 GNU Affero General Public License v3.0 or later 发布，详见 `LICENSE`。
+---

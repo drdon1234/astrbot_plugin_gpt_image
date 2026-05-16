@@ -27,6 +27,13 @@ def string_list(value: Any) -> list[str]:
     return []
 
 
+def configured_string_list(config: Mapping[str, Any], section: str, key: str) -> list[str]:
+    values = _dedupe_strings(string_list(get_section(config, section).get(key)))
+    if values:
+        return values
+    return _dedupe_strings(string_list(get_section(DEFAULT_CONFIG, section).get(key)))
+
+
 def bool_value(value: Any, fallback: bool = False) -> bool:
     if value is None or value == "":
         return fallback
@@ -96,6 +103,17 @@ def _default_from_schema_node(node: Mapping[str, Any]) -> Any:
 
 def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
 
 
 DEFAULT_CONFIG: dict[str, Any] = _load_schema_defaults()

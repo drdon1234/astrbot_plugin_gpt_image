@@ -54,7 +54,7 @@
         "description": "自定义分辨率",
         "type": "string",
         "default": "1024x1024",
-        "hint": "仅当默认尺寸选项为自定义时生效；支持自动或宽x高，宽高需满足 gpt-image-2 官方尺寸约束。"
+        "hint": "仅当默认尺寸选项为自定义时生效；填写宽x高，宽高需满足 gpt-image-2 官方尺寸约束。"
       },
       "quality": {
         "description": "默认质量",
@@ -73,6 +73,18 @@
         "type": "int",
         "default": 1,
         "hint": "引用到参考图时使用，官方范围 1 到 10。"
+      }
+    }
+  },
+  "trigger": {
+    "description": "触发词",
+    "type": "object",
+    "items": {
+      "generation_keywords": {
+        "description": "生图触发词",
+        "type": "list",
+        "default": ["生图", "画图"],
+        "hint": "群聊和私聊都直接使用这些词触发，不需要加 /。"
       }
     }
   },

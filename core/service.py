@@ -7,8 +7,8 @@ from typing import Any, AsyncIterator
 
 from .command.options import IMAGE_MODEL, OFFICIAL_MAX_OUTPUT_COUNT, ImageOptions, OptionError, normalize_image_options
 from .command.parser import parse_command_message
-from .config import get_section, merge_config
-from .constants import COMMAND_NAMES, PARAMETER_USAGE_MESSAGE
+from .config import configured_string_list, get_section, merge_config
+from .constants import PARAMETER_USAGE_MESSAGE
 from .errors import UserFacingError
 from .media.image_generator import ImageGenerator
 from .media.references import PreparedImage, ReferenceImageManager
@@ -41,6 +41,7 @@ class PreciseImageService:
         self.quota = QuotaLedger(self.data_dir / "usage.json")
         self.references = ReferenceImageManager(self.config, self.temp_files, log)
         self.generator = ImageGenerator(self.config, self.temp_files)
+        self.generation_command_names = configured_string_list(self.config, "trigger", "generation_keywords")
 
     async def generate(self, event: Any, message_text: str) -> AsyncIterator[Reply]:
         if self._closing:
@@ -49,9 +50,9 @@ class PreciseImageService:
 
         released = False
         try:
-            command = parse_command_message(message_text, COMMAND_NAMES)
+            command = parse_command_message(message_text, self.generation_command_names)
             if command.show_help:
-                yield TextReply(PARAMETER_USAGE_MESSAGE)
+                yield TextReply(self.parameter_usage_message())
                 return
 
             identity = identity_from_event(event)
@@ -83,7 +84,7 @@ class PreciseImageService:
             )
         except OptionError as error:
             if getattr(error, "code", "") in {"PROMPT_REQUIRED", "INVALID_SIZE"}:
-                yield TextReply(PARAMETER_USAGE_MESSAGE)
+                yield TextReply(self.parameter_usage_message())
                 return
             yield TextReply(str(error))
             return
@@ -169,6 +170,10 @@ class PreciseImageService:
 
     def begin_shutdown(self) -> None:
         self._closing = True
+
+    def parameter_usage_message(self) -> str:
+        triggers = "、".join(self.generation_command_names)
+        return f"{PARAMETER_USAGE_MESSAGE}\n当前触发词：{triggers}"
 
     async def shutdown(self) -> None:
         self.begin_shutdown()

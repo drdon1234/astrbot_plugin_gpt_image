@@ -14,18 +14,6 @@ IMAGE_SIZE_CONSTRAINTS = {
     "max_pixels": 8294400,
 }
 
-POPULAR_IMAGE_SIZES = (
-    "1280x720",
-    "720x1280",
-    "1024x1024",
-    "2560x1440",
-    "1440x2560",
-    "2048x2048",
-    "3840x2160",
-    "2160x3840",
-    "2880x2880",
-)
-
 SIZE_PRESET_VALUES = {
     "自动": "auto",
     "1280x720 16:9 1k": "1280x720",
@@ -37,23 +25,37 @@ SIZE_PRESET_VALUES = {
     "3840x2160 16:9 4k": "3840x2160",
     "2160x3840 9:16 4k": "2160x3840",
     "2880x2880 1:1 4k": "2880x2880",
-    "16:9 1k": "1280x720",
-    "9:16 1k": "720x1280",
-    "1:1 1k": "1024x1024",
-    "16:9 2k": "2560x1440",
-    "9:16 2k": "1440x2560",
-    "1:1 2k": "2048x2048",
-    "16:9 4k": "3840x2160",
-    "9:16 4k": "2160x3840",
-    "1:1 4k": "2880x2880",
     "自定义": "custom",
 }
-SIZE_PRESET_ALIASES = {
-    **SIZE_PRESET_VALUES,
-    "auto": "auto",
-    **{size: size for size in POPULAR_IMAGE_SIZES},
+CHAT_SIZE_ALIASES = {
+    "16:9 1k": "1280x720",
+    "横屏 1k": "1280x720",
+    "横屏1k": "1280x720",
+    "9:16 1k": "720x1280",
+    "竖屏 1k": "720x1280",
+    "竖屏1k": "720x1280",
+    "1:1 1k": "1024x1024",
+    "方图 1k": "1024x1024",
+    "方图1k": "1024x1024",
+    "16:9 2k": "2560x1440",
+    "横屏 2k": "2560x1440",
+    "横屏2k": "2560x1440",
+    "9:16 2k": "1440x2560",
+    "竖屏 2k": "1440x2560",
+    "竖屏2k": "1440x2560",
+    "1:1 2k": "2048x2048",
+    "方图 2k": "2048x2048",
+    "方图2k": "2048x2048",
+    "16:9 4k": "3840x2160",
+    "横屏 4k": "3840x2160",
+    "横屏4k": "3840x2160",
+    "9:16 4k": "2160x3840",
+    "竖屏 4k": "2160x3840",
+    "竖屏4k": "2160x3840",
+    "1:1 4k": "2880x2880",
+    "方图 4k": "2880x2880",
+    "方图4k": "2880x2880",
 }
-
 IMAGE_MODEL = "gpt-image-2"
 DEFAULT_BACKGROUND = "opaque"
 DEFAULT_OUTPUT_FORMAT = "png"
@@ -66,10 +68,6 @@ QUALITY_VALUES = {
     "低": "low",
     "中": "medium",
     "高": "high",
-    "auto": "auto",
-    "low": "low",
-    "medium": "medium",
-    "high": "high",
 }
 
 
@@ -105,7 +103,7 @@ def parse_image_size(value: Any) -> ParsedImageSize | None:
         .replace("＊", "x")
         .replace(" ", "")
     )
-    if option in {"auto", "自动"}:
+    if option == "auto":
         return ParsedImageSize("auto", auto=True)
 
     parts = option.split("x")
@@ -120,7 +118,7 @@ def parse_image_size(value: Any) -> ParsedImageSize | None:
 def validate_image_size(value: Any) -> tuple[bool, str, ParsedImageSize | None]:
     parsed = parse_image_size(value)
     if parsed is None:
-        return False, "尺寸格式需要是 自动、auto 或 宽x高，例如 1536x1024。", None
+        return False, "尺寸格式需要是宽x高，例如 1536x1024。", None
     if parsed.auto:
         return True, "", parsed
 
@@ -150,12 +148,12 @@ def normalize_image_size(value: Any, fallback: str = "1024x1024") -> str:
 
 def resolve_default_image_size(defaults: Mapping[str, Any]) -> str:
     preset = _normalize_config_text(defaults.get("size_preset") or "自动")
-    resolved = SIZE_PRESET_ALIASES.get(preset)
+    resolved = SIZE_PRESET_VALUES.get(preset)
     if resolved == "custom":
         return str(defaults.get("custom_size") or DEFAULT_CUSTOM_SIZE)
     if resolved:
         return resolved
-    return str(defaults.get("size_preset") or "自动").strip()
+    raise OptionError("默认尺寸选项无效，请在插件配置中选择 自动、常用尺寸或自定义。", "INVALID_SIZE_PRESET")
 
 
 def normalize_choice(value: Any, allowed: Mapping[str, str], fallback: str, label: str, labels: tuple[str, ...]) -> str:

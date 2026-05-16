@@ -8,7 +8,7 @@ _✨ 直接生图，引用图片改图 ✨_
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![AstrBot](https://img.shields.io/badge/AstrBot-Plugin-orange.svg)](https://github.com/AstrBotDevs/AstrBot)
-[![Version](https://img.shields.io/badge/Version-v0.1.4-green.svg)](https://github.com/drdon1234/astrbot_plugin_gpt_image)
+[![Version](https://img.shields.io/badge/Version-v0.1.5-green.svg)](https://github.com/drdon1234/astrbot_plugin_gpt_image)
 
 </div>
 

@@ -2,9 +2,9 @@
 
 ![:name](https://count.getloli.com/@astrbot_plugin_gpt_image?name=astrbot_plugin_gpt_image&theme=minecraft&padding=6&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
 
-# GPT Image 精细生图
+# GPT Image 2 精细生图改图
 
-_✨ 直接生图，引用图片改图 ✨_
+_基于 gpt-image-2 的 AstrBot 精细生图与引用图改图插件_
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![AstrBot](https://img.shields.io/badge/AstrBot-Plugin-orange.svg)](https://github.com/AstrBotDevs/AstrBot)
@@ -25,12 +25,11 @@ _✨ 直接生图，引用图片改图 ✨_
 
 ## ✨ 功能
 
-- 文生图与引用图片改图
-- 默认触发词：`生图`、`画图`
-- 可选末尾分辨率：`1024x1024`，或 `16:9 2K` / `横屏 2K`
-- 可配置默认尺寸、质量、生图张数、改图张数
-- 支持群聊/私聊额度、管理员、白名单、黑名单
-- 多人使用时可控制总并发
+- 基于 `gpt-image-2` 进行高质量文生图
+- 回复或引用图片即可改图，适合风格调整、构图保留和细节重绘
+- 提示词末尾可指定具体像素，或使用 `16:9 2K` / `横屏 2K` 这类分辨率简写
+- 可分别配置默认尺寸、质量、生图张数和改图张数
+- 多张图并发生成，默认输出 PNG
 
 ---
 
@@ -87,7 +86,7 @@ _✨ 直接生图，引用图片改图 ✨_
 - 默认效果：尺寸、质量、生图张数、改图张数
 - 使用控制：触发词、额度、权限、并发
 
-插件默认使用 `gpt-image-2`，输出 PNG 图片。
+插件固定使用 `gpt-image-2`，默认输出 PNG 图片。
 默认尺寸可在配置里选择自动、常用尺寸或自定义。生图和改图张数分开配置；多图会并发生成，接口慢时需要等待；引用图过大、不可访问或来自内网地址时会被跳过或提示不可用。
 
 ---

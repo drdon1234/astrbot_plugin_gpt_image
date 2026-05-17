@@ -1,5 +1,5 @@
 name: astrbot_plugin_gpt_image
-desc: OpenAI-compatible 精细参数生图插件，支持多参考图、群聊/私聊配额和黑白名单。
+desc: 基于 gpt-image-2 的精细生图改图插件，支持提示词、引用图和分辨率控制。
 version: v0.1.5
 author: independent
 license: AGPL-3.0-or-later

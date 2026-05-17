@@ -14,7 +14,7 @@ from .core.service import ImageReply, PreciseImageService, TextReply
 from .core.storage.paths import resolve_plugin_data_dir
 
 
-@register(PLUGIN_NAME, "Independent", "基于 gpt-image-2 的精细生图和引用图改图插件。", "0.1.5")
+@register(PLUGIN_NAME, "drdon1234", "基于 gpt-image-2 的精细生图和引用图改图插件。", "0.1.5")
 class PreciseImagePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig | None = None):
         super().__init__(context)

@@ -8,6 +8,8 @@ from ..config import bool_value, string_list
 
 @dataclass(frozen=True)
 class AccessIdentity:
+    """Normalized actor identity used by access and quota policies."""
+
     user_id: str
     group_id: str = ""
     session_id: str = ""
@@ -16,12 +18,15 @@ class AccessIdentity:
 
 @dataclass(frozen=True)
 class AccessDecision:
+    """Access-control result with optional admin status."""
+
     allowed: bool
     reason: str = ""
     is_admin: bool = False
 
 
 def evaluate_access(config: Mapping[str, Any], identity: AccessIdentity) -> AccessDecision:
+    """Evaluate admin, personal, and group allow or deny lists in priority order."""
     user_id = str(identity.user_id or "").strip()
     group_id = str(identity.group_id or "").strip()
 

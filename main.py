@@ -4,26 +4,28 @@ import asyncio
 
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
-from astrbot.api.star import Context, Star, register
-from astrbot.core.utils.astrbot_path import get_astrbot_data_path
+from astrbot.api.star import Context, Star, StarTools, register
 from astrbot.core.star.filter.event_message_type import EventMessageType
 
 from .core.command.parser import extract_command_body, normalize_command_message
-from .core.constants import PLUGIN_NAME, STATUS_COMMAND_NAMES
+from .core.constants import PLUGIN_NAME, STATUS_COMMAND_NAME
 from .core.service import ImageReply, PreciseImageService, TextReply
-from .core.storage.paths import resolve_plugin_data_dir
 
 
-@register(PLUGIN_NAME, "drdon1234", "基于 gpt-image-2 的精细生图和引用图改图插件。", "0.1.5")
+@register(PLUGIN_NAME, "drdon1234", "基于 gpt-image-2 的精细生图和引用图改图插件。", "1.0.0")
 class PreciseImagePlugin(Star):
+    """AstrBot adapter that routes message events into the image service."""
+
     def __init__(self, context: Context, config: AstrBotConfig | None = None):
+        """Initialize service state with AstrBot-managed plugin data storage."""
         super().__init__(context)
-        data_dir = resolve_plugin_data_dir(PLUGIN_NAME, get_astrbot_data_path)
+        data_dir = StarTools.get_data_dir()
         self.service = PreciseImageService(config or {}, data_dir, logger)
         self._active_generation_tasks: set[asyncio.Task] = set()
 
     @filter.event_message_type(EventMessageType.ALL)
     async def handle_image_message(self, event: AstrMessageEvent):
+        """Handle generation and quota commands detected in group or private messages."""
         if self._is_event_stopped(event):
             return
 
@@ -32,7 +34,7 @@ class PreciseImagePlugin(Star):
             return
 
         self._stop_event(event)
-        status_body = extract_command_body(message_text, STATUS_COMMAND_NAMES)
+        status_body = extract_command_body(message_text, [STATUS_COMMAND_NAME])
         if status_body is not None:
             reply = await self.service.quota_status(event)
             await event.send(self._to_astrbot_result(event, reply))
@@ -55,6 +57,7 @@ class PreciseImagePlugin(Star):
                 self._active_generation_tasks.discard(task)
 
     async def terminate(self):
+        """Cancel in-flight generation tasks and clear plugin-owned temporary files."""
         self.service.begin_shutdown()
         current = asyncio.current_task()
         tasks = [
@@ -78,7 +81,8 @@ class PreciseImagePlugin(Star):
         return event.plain_result(reply.text)
 
     def _command_message_text(self, event: AstrMessageEvent) -> str | None:
-        command_names = [*STATUS_COMMAND_NAMES, *self.service.generation_command_names]
+        """Return normalized command text when an event starts with a configured trigger."""
+        command_names = [STATUS_COMMAND_NAME, *self.service.generation_command_names]
         for text in self._candidate_message_texts(event):
             normalized = normalize_command_message(text, command_names)
             if normalized is not None:

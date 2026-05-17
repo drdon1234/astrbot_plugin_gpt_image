@@ -20,12 +20,15 @@ from .references import PreparedImage
 
 
 class ImageGenerator:
+    """Client wrapper for gpt-image-2 generation, editing, and result materialization."""
+
     def __init__(self, config: dict, temp_files: TempFileManager) -> None:
         self.config = config
         self.temp_files = temp_files
         self._request_semaphore = asyncio.Semaphore(_max_concurrent_image_requests(config))
 
     async def generate_images(self, options: ImageOptions, reference_images: list[PreparedImage]) -> AsyncIterator[str]:
+        """Generate the requested number of images as concurrent single-image requests."""
         client = self._client()
         tasks: list[asyncio.Task[str]] = []
         try:
@@ -59,6 +62,7 @@ class ImageGenerator:
         return await self._materialize_first_image(response)
 
     def _client(self) -> AsyncOpenAI:
+        """Create an OpenAI-compatible async client from plugin config."""
         api = get_section(self.config, "api")
         api_key = str(api.get("api_key") or os.getenv("OPENAI_API_KEY") or "").strip()
         if not api_key:
@@ -68,6 +72,7 @@ class ImageGenerator:
         return AsyncOpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
 
     async def _create_image_generation(self, client: AsyncOpenAI, options: ImageOptions) -> Any:
+        """Send a single text-to-image request."""
         request = {
             "model": IMAGE_MODEL,
             "prompt": options.prompt,
@@ -87,6 +92,7 @@ class ImageGenerator:
         options: ImageOptions,
         reference_images: list[PreparedImage],
     ) -> Any:
+        """Send a single image-edit request with prepared reference images."""
         handles = []
         try:
             for image in reference_images:
@@ -109,6 +115,7 @@ class ImageGenerator:
                 handle.close()
 
     async def _materialize_first_image(self, response: Any) -> str:
+        """Store the first image from a b64_json or URL response and return its path."""
         data = getattr(response, "data", None) or []
         if not data:
             raise UserFacingError("图片接口没有返回可显示的图片。")
@@ -122,6 +129,7 @@ class ImageGenerator:
         raise UserFacingError("图片接口没有返回 b64_json 或 url。")
 
     def _store_generated_payload(self, payload: str) -> Path:
+        """Decode a base64 or data URL image payload into plugin temporary storage."""
         value = str(payload or "").strip()
         mime = f"image/{DEFAULT_OUTPUT_FORMAT if DEFAULT_OUTPUT_FORMAT != 'jpg' else 'jpeg'}"
         data_url_match = re.match(r"^data:(image/(?:png|jpeg|jpg|webp));base64,(.+)$", value, re.I | re.S)
@@ -135,6 +143,7 @@ class ImageGenerator:
         return self.temp_files.write_bytes(data, label="generated", extension=extension)
 
     async def _download_generated_url(self, url: str) -> Path:
+        """Download a generated image URL into plugin temporary storage."""
         async with httpx.AsyncClient(timeout=IMAGE_DOWNLOAD_TIMEOUT_SECONDS, follow_redirects=True) as client:
             response = await client.get(url)
             response.raise_for_status()

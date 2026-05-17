@@ -20,11 +20,15 @@ from .storage.tempfiles import TempFileManager
 
 @dataclass(frozen=True)
 class TextReply:
+    """Text response returned by the core service for AstrBot to send."""
+
     text: str
 
 
 @dataclass(frozen=True)
 class ImageReply:
+    """Image file response returned by the core service for AstrBot to send."""
+
     path: str
 
 
@@ -32,6 +36,8 @@ Reply = TextReply | ImageReply
 
 
 class PreciseImageService:
+    """Application service that coordinates parsing, policy, quota, references, and generation."""
+
     def __init__(self, raw_config: dict | None, data_dir: Path, log: Any) -> None:
         self.config = merge_config(raw_config or {})
         self.log = log
@@ -44,6 +50,7 @@ class PreciseImageService:
         self.generation_command_names = configured_string_list(self.config, "trigger", "generation_keywords")
 
     async def generate(self, event: Any, message_text: str) -> AsyncIterator[Reply]:
+        """Run one image command and stream text or image replies for the caller."""
         if self._closing:
             yield TextReply("插件正在停止，暂不接受新的生图请求。")
             return
@@ -140,6 +147,7 @@ class PreciseImageService:
             await self.references.cleanup(prepared_refs)
 
     async def quota_status(self, event: Any) -> TextReply:
+        """Return quota usage for the current user or group scope."""
         try:
             identity = identity_from_event(event)
             access_decision = evaluate_access(get_section(self.config, "permissions"), identity)
@@ -169,17 +177,21 @@ class PreciseImageService:
         )
 
     def begin_shutdown(self) -> None:
+        """Mark the service as closing so new generation requests are rejected."""
         self._closing = True
 
     def parameter_usage_message(self) -> str:
+        """Build the user-facing parameter help text with configured triggers."""
         triggers = "、".join(self.generation_command_names)
         return f"{PARAMETER_USAGE_MESSAGE}\n当前触发词：{triggers}"
 
     async def shutdown(self) -> None:
+        """Stop accepting new work and remove all plugin-owned temporary files."""
         self.begin_shutdown()
         await self.temp_files.cleanup_all()
 
     async def cleanup_reply(self, reply: Reply) -> None:
+        """Remove temporary files attached to image replies after sending."""
         if isinstance(reply, ImageReply):
             await self.temp_files.cleanup_file(reply.path)
 

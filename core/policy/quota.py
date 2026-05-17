@@ -15,6 +15,8 @@ from ..config import bool_value, int_value
 
 
 class QuotaExceededError(Exception):
+    """Raised when a request would exceed the active quota window."""
+
     def __init__(
         self,
         *,
@@ -38,6 +40,7 @@ class QuotaExceededError(Exception):
         self.retry_after_seconds = retry_after_seconds
 
     def user_message(self) -> str:
+        """Build a user-facing quota denial message."""
         retry_minutes = max(1, (self.retry_after_seconds + 59) // 60)
         return (
             f"当前{self._scope_label()} {self.window_minutes} 分钟内最多生成 {self.limit} 张图，"
@@ -50,17 +53,22 @@ class QuotaExceededError(Exception):
 
 
 class QuotaLedgerError(Exception):
+    """Raised when the persisted quota ledger cannot be read safely."""
+
     pass
 
 
 @dataclass(frozen=True)
 class QuotaLimit:
+    """Configured quota window and maximum image count."""
+
     enabled: bool
     window_minutes: int
     max_images: int
 
     @classmethod
     def from_config(cls, config: Mapping[str, Any]) -> "QuotaLimit":
+        """Create a bounded quota limit from plugin configuration."""
         return cls(
             enabled=bool_value(config.get("enabled"), True),
             window_minutes=int_value(config.get("window_minutes"), 60, 1, 60 * 24 * 30),
@@ -69,15 +77,19 @@ class QuotaLimit:
 
     @property
     def window_seconds(self) -> int:
+        """Return the quota window length in seconds."""
         return self.window_minutes * 60
 
     @property
     def is_limited(self) -> bool:
+        """Return whether this quota limit actively restricts requests."""
         return self.enabled and self.max_images > 0
 
 
 @dataclass(frozen=True)
 class QuotaSnapshot:
+    """Read-only quota usage view for a single scope and key."""
+
     scope: str
     key: str
     used: int
@@ -88,6 +100,8 @@ class QuotaSnapshot:
 
 
 class QuotaReservation:
+    """Reservation handle that releases active quota after a request finishes."""
+
     def __init__(
         self,
         ledger: "QuotaLedger | None",
@@ -102,6 +116,7 @@ class QuotaReservation:
         self._released = False
 
     async def release(self, success_count: int = 0) -> None:
+        """Release reserved quota and record successful image count once."""
         if self._released:
             return
         if self._ledger and self.reservation_id:
@@ -110,6 +125,8 @@ class QuotaReservation:
 
 
 class QuotaLedger:
+    """JSON-backed quota ledger with in-process active request reservations."""
+
     def __init__(self, path: Path, *, now: Callable[[], float] | None = None) -> None:
         self.path = Path(path)
         self.now = now or time.time
@@ -125,6 +142,7 @@ class QuotaLedger:
         limit: QuotaLimit,
         metadata: Mapping[str, Any] | None = None,
     ) -> QuotaReservation:
+        """Reserve quota before generation so concurrent requests count correctly."""
         cost = max(1, int(cost))
         if not limit.is_limited:
             return QuotaReservation(None, cost=cost, limited=False)
@@ -161,6 +179,7 @@ class QuotaLedger:
             return QuotaReservation(self, reservation_id, cost=cost, limited=True)
 
     async def release(self, reservation_id: str, *, success_count: int = 0) -> None:
+        """Release an active reservation and persist the successful image count."""
         async with self._lock:
             entry = self._active.get(reservation_id)
             if not entry:
@@ -182,6 +201,7 @@ class QuotaLedger:
             self._active.pop(reservation_id, None)
 
     async def snapshot(self, *, scope: str, key: str, limit: QuotaLimit) -> QuotaSnapshot:
+        """Read used, active, and remaining quota for one scope and key."""
         if not limit.is_limited:
             return QuotaSnapshot(scope, key, used=0, active=0, limit=0, window_minutes=limit.window_minutes, remaining=None)
         async with self._lock:
@@ -194,6 +214,7 @@ class QuotaLedger:
             return QuotaSnapshot(scope, key, used, active, limit.max_images, limit.window_minutes, remaining)
 
     async def _read_data(self) -> dict[str, Any]:
+        """Read and validate the quota JSON ledger from disk."""
         if not self.path.exists():
             return {"version": 1, "events": []}
         try:

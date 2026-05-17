@@ -72,6 +72,8 @@ QUALITY_VALUES = {
 
 
 class OptionError(ValueError):
+    """User-correctable option error with a stable machine-readable code."""
+
     def __init__(self, message: str, code: str = "INVALID_OPTIONS") -> None:
         super().__init__(message)
         self.code = code
@@ -79,6 +81,8 @@ class OptionError(ValueError):
 
 @dataclass(frozen=True)
 class ParsedImageSize:
+    """Normalized image size with optional parsed pixel dimensions."""
+
     value: str
     auto: bool = False
     width: int | None = None
@@ -87,6 +91,8 @@ class ParsedImageSize:
 
 @dataclass(frozen=True)
 class ImageOptions:
+    """Final image request options after chat input and defaults are merged."""
+
     prompt: str
     size: str
     quality: str
@@ -94,6 +100,7 @@ class ImageOptions:
 
 
 def parse_image_size(value: Any) -> ParsedImageSize | None:
+    """Parse API-ready auto or width-by-height values into a normalized size."""
     option = (
         str(value or "")
         .strip()
@@ -116,6 +123,7 @@ def parse_image_size(value: Any) -> ParsedImageSize | None:
 
 
 def validate_image_size(value: Any) -> tuple[bool, str, ParsedImageSize | None]:
+    """Validate size format and gpt-image-2 pixel constraints before requests."""
     parsed = parse_image_size(value)
     if parsed is None:
         return False, "尺寸格式需要是宽x高，例如 1536x1024。", None
@@ -140,6 +148,7 @@ def validate_image_size(value: Any) -> tuple[bool, str, ParsedImageSize | None]:
 
 
 def normalize_image_size(value: Any, fallback: str = "1024x1024") -> str:
+    """Return a validated API size, using fallback when no override is provided."""
     ok, reason, parsed = validate_image_size(value or fallback)
     if ok and parsed:
         return parsed.value
@@ -147,6 +156,7 @@ def normalize_image_size(value: Any, fallback: str = "1024x1024") -> str:
 
 
 def resolve_default_image_size(defaults: Mapping[str, Any]) -> str:
+    """Resolve the configured default size preset into an API size value."""
     preset = _normalize_config_text(defaults.get("size_preset") or "自动")
     resolved = SIZE_PRESET_VALUES.get(preset)
     if resolved == "custom":
@@ -157,6 +167,7 @@ def resolve_default_image_size(defaults: Mapping[str, Any]) -> str:
 
 
 def normalize_choice(value: Any, allowed: Mapping[str, str], fallback: str, label: str, labels: tuple[str, ...]) -> str:
+    """Normalize a configured choice against a fixed label-to-value mapping."""
     option = _normalize_config_text(value or fallback)
     if option in allowed:
         return allowed[option]
@@ -172,6 +183,7 @@ def normalize_image_options(
     max_output_count: int = OFFICIAL_MAX_OUTPUT_COUNT,
     is_edit: bool = False,
 ) -> ImageOptions:
+    """Build validated generation options from prompt, chat overrides, and defaults."""
     prompt = str(prompt or "").strip()
     if not prompt:
         raise OptionError("请提供生图提示词。", "PROMPT_REQUIRED")

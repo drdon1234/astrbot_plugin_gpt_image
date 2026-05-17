@@ -8,7 +8,7 @@ _基于 gpt-image-2 的 AstrBot 精细生图与引用图改图插件_
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![AstrBot](https://img.shields.io/badge/AstrBot-Plugin-orange.svg)](https://github.com/AstrBotDevs/AstrBot)
-[![Version](https://img.shields.io/badge/Version-v0.1.5-green.svg)](https://github.com/drdon1234/astrbot_plugin_gpt_image)
+[![Version](https://img.shields.io/badge/Version-v1.0.0-green.svg)](https://github.com/drdon1234/astrbot_plugin_gpt_image)
 
 </div>
 

@@ -28,6 +28,8 @@ from ..storage.tempfiles import TempFileManager
 
 @dataclass(frozen=True)
 class PreparedImage:
+    """Reference image file prepared for an edit request."""
+
     path: Path
     source: str
     mime_type: str
@@ -36,6 +38,8 @@ class PreparedImage:
 
 @dataclass(frozen=True)
 class ReferencePreparationResult:
+    """Summary of reference image preparation and skipped inputs."""
+
     images: list[PreparedImage]
     source_count: int
     attempted_count: int
@@ -44,16 +48,20 @@ class ReferencePreparationResult:
 
     @property
     def skipped_count(self) -> int:
+        """Return the total number of failed or truncated reference sources."""
         return self.failed_count + self.truncated_count
 
 
 class ReferenceImageManager:
+    """Extract, validate, download, and clean up quoted reference images."""
+
     def __init__(self, config: dict, temp_files: TempFileManager, log: Any) -> None:
         self.config = config
         self.temp_files = temp_files
         self.log = log
 
     async def sources_from_event(self, event: Any) -> list[str]:
+        """Collect image sources from reply chains, raw payloads, and quoted messages."""
         message_obj = getattr(event, "message_obj", None)
         raw_message = getattr(message_obj, "raw_message", None) if message_obj else None
         sources: list[str] = []
@@ -79,6 +87,7 @@ class ReferenceImageManager:
         return _dedupe(sources)
 
     async def prepare_images(self, sources: list[str]) -> ReferencePreparationResult:
+        """Prepare bounded reference image files from extracted source strings."""
         prepared: list[PreparedImage] = []
         limited_sources = sources[:MAX_REFERENCE_IMAGES]
         failed_count = 0
@@ -105,6 +114,7 @@ class ReferenceImageManager:
         )
 
     async def cleanup(self, images: list[PreparedImage]) -> None:
+        """Remove temporary reference images created for one request."""
         for image in images:
             if image.temporary:
                 await self.temp_files.cleanup_file(image.path)
@@ -296,6 +306,7 @@ class ReferenceImageManager:
         return ""
 
     async def _fetch_quoted_message(self, event: Any, message_id: str) -> Any:
+        """Fetch a quoted platform message by message ID when the adapter supports it."""
         return await self._call_platform_action_by_message_id(event, "get_msg", message_id)
 
     async def _extract_sources_from_quoted_payload(
@@ -563,6 +574,7 @@ class ReferenceImageManager:
         return segments
 
     async def _prepare_image(self, source: str, *, max_bytes: int, timeout: int) -> PreparedImage | None:
+        """Prepare one reference source from data URL, base64, HTTP, or trusted local file."""
         source = str(source or "").strip()
         if not source:
             return None
@@ -587,6 +599,7 @@ class ReferenceImageManager:
         return None
 
     def _write_temp_image(self, data: bytes, mime: str, *, max_bytes: int, label: str) -> PreparedImage:
+        """Validate image bytes and copy them into plugin-owned temporary storage."""
         mime = mime.lower().replace("image/jpg", "image/jpeg")
         if mime not in IMAGE_MIME_TYPES:
             raise UserFacingError("参考图只支持 PNG、JPEG、WEBP。")
@@ -599,6 +612,7 @@ class ReferenceImageManager:
         return PreparedImage(path, str(path), mime, temporary=True)
 
     async def _download_http_image(self, source: str, *, max_bytes: int, timeout: int) -> PreparedImage:
+        """Download a public HTTP image with redirect and byte-size limits."""
         current_url = source
         await _ensure_public_http_url(current_url)
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
@@ -720,6 +734,7 @@ def _decode_limited_base64(payload: str, *, max_bytes: int) -> bytes:
 
 
 async def _ensure_public_http_url(url: str) -> None:
+    """Reject non-public HTTP URLs before any outbound reference-image request."""
     parts = urlsplit(url)
     if parts.scheme not in {"http", "https"} or not parts.hostname:
         raise UserFacingError("参考图 URL 无效。")
@@ -775,6 +790,7 @@ def _resolve_host_addresses(host: str, port: int) -> list[ipaddress.IPv4Address 
 
 
 async def _read_limited_response(response: httpx.Response, *, max_bytes: int) -> bytes:
+    """Read an HTTP response while enforcing the reference-image byte limit."""
     content_length = response.headers.get("content-length")
     if content_length:
         with contextlib.suppress(ValueError):

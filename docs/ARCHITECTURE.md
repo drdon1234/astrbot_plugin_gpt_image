@@ -69,7 +69,6 @@ astrbot_plugin_gpt_image/
     │   ├── references.py   # 引用消息图片提取、下载和临时文件管理
     │   └── image_generator.py # OpenAI-compatible 生图调用和生成图临时落盘
     └── storage/
-        ├── paths.py        # 插件持久数据目录解析和初始化
         └── tempfiles.py    # 插件临时目录、临时图片创建和安全删除
 ```
 
@@ -303,9 +302,8 @@ AccessDecision(allowed=True, reason="")
 
 该模块不处理 AstrBot event，也不判断用户权限或配额。
 
-### 2.11 路径、常量和错误模块
+### 2.11 临时文件、常量和错误模块
 
-* `core/storage/paths.py`：解析并创建插件持久数据目录。
 * `core/storage/tempfiles.py`：使用 Python `tempfile` 创建插件临时根目录，集中创建和删除插件拥有的图片文件。
 * `core/constants.py`：集中维护插件名、固定参数提示和图片 MIME 映射。
 * `core/errors.py`：定义可直接展示给用户的 `UserFacingError`。
@@ -499,7 +497,7 @@ OpenAI-compatible 调用、参考图下载、生成图下载失败时：
 配额账本 -> quota.py
 引用图 -> references.py
 模型调用/临时落盘 -> image_generator.py
-路径/临时文件 -> paths.py / tempfiles.py
+临时文件 -> tempfiles.py
 常量/错误 -> constants.py / errors.py
 ```
 

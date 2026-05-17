@@ -1,6 +1,6 @@
 PLUGIN_NAME = "astrbot_plugin_gpt_image"
 
-STATUS_COMMAND_NAMES = ["生图额度"]
+STATUS_COMMAND_NAME = "生图额度"
 
 PARAMETER_USAGE_MESSAGE = (
     "请选择合法参数（触发词后、末尾分辨率前的全部内容都会作为提示词）\n"

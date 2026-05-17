@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 def merge_config(raw: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Merge AstrBot-provided config onto schema-derived defaults."""
     raw = deepcopy(dict(raw or {}))
     merged = deepcopy(DEFAULT_CONFIG)
     _deep_merge(merged, raw)
@@ -13,11 +14,13 @@ def merge_config(raw: Mapping[str, Any] | None) -> dict[str, Any]:
 
 
 def get_section(config: Mapping[str, Any], key: str) -> dict[str, Any]:
+    """Return a config section as a dict, or an empty dict for invalid shapes."""
     value = config.get(key)
     return value if isinstance(value, dict) else {}
 
 
 def string_list(value: Any) -> list[str]:
+    """Normalize comma-separated strings or lists into a trimmed string list."""
     if value is None:
         return []
     if isinstance(value, str):
@@ -28,6 +31,7 @@ def string_list(value: Any) -> list[str]:
 
 
 def configured_string_list(config: Mapping[str, Any], section: str, key: str) -> list[str]:
+    """Read a configured string list, falling back to schema defaults when empty."""
     values = _dedupe_strings(string_list(get_section(config, section).get(key)))
     if values:
         return values
@@ -35,6 +39,7 @@ def configured_string_list(config: Mapping[str, Any], section: str, key: str) ->
 
 
 def bool_value(value: Any, fallback: bool = False) -> bool:
+    """Parse permissive boolean config values with an explicit fallback."""
     if value is None or value == "":
         return fallback
     if isinstance(value, bool):
@@ -50,6 +55,7 @@ def bool_value(value: Any, fallback: bool = False) -> bool:
 
 
 def int_value(value: Any, fallback: int, minimum: int | None = None, maximum: int | None = None) -> int:
+    """Parse an integer config value and clamp it to optional bounds."""
     try:
         parsed = int(str(value).strip())
     except (TypeError, ValueError):
@@ -72,6 +78,7 @@ def _deep_merge(target: dict[str, Any], source: Mapping[str, Any]) -> None:
 
 
 def _load_schema_defaults() -> dict[str, Any]:
+    """Load plugin defaults directly from the AstrBot config schema."""
     schema_path = Path(__file__).resolve().parents[1] / "_conf_schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     return _defaults_from_schema_items(schema)

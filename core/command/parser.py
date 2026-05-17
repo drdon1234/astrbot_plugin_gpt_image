@@ -9,6 +9,8 @@ from .options import CHAT_SIZE_ALIASES
 
 @dataclass(frozen=True)
 class ParsedCommand:
+    """Parsed user command body and options extracted from chat text."""
+
     prompt: str
     options: dict[str, Any] = field(default_factory=dict)
     show_help: bool = False
@@ -23,6 +25,7 @@ SEPARATOR_PATTERN = r"\s\u2000-\u200f\u2028\u2029\u3000\ufeff"
 
 
 def parse_command_message(message: str, command_names: Iterable[str]) -> ParsedCommand:
+    """Parse a trigger-prefixed message into prompt text and trailing size options."""
     body = extract_command_body(message, command_names)
     if body is None:
         return ParsedCommand(prompt="")
@@ -42,6 +45,7 @@ def parse_command_message(message: str, command_names: Iterable[str]) -> ParsedC
 
 
 def normalize_command_message(message: str, command_names: Iterable[str]) -> str | None:
+    """Normalize platform-added reply or mention prefixes before trigger matching."""
     raw_text = str(message or "").strip()
     text = _strip_leading_command_noise(raw_text)
     if _strip_matching_command_prefix(text, command_names) is not None:
@@ -55,6 +59,7 @@ def normalize_command_message(message: str, command_names: Iterable[str]) -> str
 
 
 def extract_command_body(message: str, command_names: Iterable[str]) -> str | None:
+    """Return message content after a matching trigger, or None when not triggered."""
     text = normalize_command_message(message, command_names)
     if text is None:
         return None
@@ -146,6 +151,7 @@ def _normalize_token(token: str) -> str:
 
 
 def _split_trailing_size(body: str) -> tuple[str, str | None]:
+    """Split only a legal trailing size from the prompt body."""
     text = str(body or "").strip()
     if not text:
         return "", None
